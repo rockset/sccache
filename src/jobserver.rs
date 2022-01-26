@@ -22,9 +22,17 @@ pub struct Acquired {
 impl Client {
     // unsafe because `from_env` is unsafe (can use the wrong fds)
     pub unsafe fn new() -> Client {
+        let num_cpus = match std::env::var("SCCACHE_NUM_CPUS") {    
+            Ok(val) => match val.parse::<usize>() {
+                Ok(v) => v,
+                Err(e) => panic!("SCCACHE_NUM_CPUS must be a number, {}", e)
+            },
+            Err(_e) => num_cpus::get(),
+        };
+
         match jobserver::Client::from_env() {
             Some(c) => Client::_new(c, true),
-            None => Client::new_num(num_cpus::get()),
+            None => Client::new_num(num_cpus),
         }
     }
 
