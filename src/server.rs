@@ -391,8 +391,15 @@ pub fn start_server(config: &Config, port: u16) -> Result<()> {
     info!("start_server: port: {}", port);
     let client = unsafe { Client::new() };
     let runtime = Runtime::new()?;
+    let num_cpus = match std::env::var("SCCACHE_NUM_CPUS") {
+        Ok(val) => match val.parse::<usize>() {
+            Ok(v) => v,
+            Err(e) => panic!("SCCACHE_NUM_CPUS must be a number, {}", e)
+        },
+        Err(_e) => std::cmp::max(20, 2 * num_cpus::get()),
+    };
     let pool = ThreadPool::builder()
-        .pool_size(std::cmp::max(20, 2 * num_cpus::get()))
+        .pool_size(num_cpus)
         .create()?;
     let dist_client = DistClientContainer::new(config, &pool);
     let storage = storage_from_config(config, &pool);
